@@ -143,15 +143,18 @@ end)
 This module was made to be simple and beginner-friendly, but also useful for intermediate projects.  
 If you find any bugs, improvements, or have suggestions, feel free to open an issue or contribute. Any help is appreciated!
 
-## Rojo
+## Rojo & Download the Place
 To build the place from scratch, use:
 
 ```bash
 rojo build -o "TouchGuiButtons.rbxlx"
 ```
 
-Next, open `TouchGuiButtons.rbxlx` in Roblox Studio and start the Rojo server:
+Then, open `TouchGuiButtons.rbxlx` in **Roblox Studio** and start the Rojo server:
 
 ```bash
 rojo serve
 ```
+
+**Download the ready-to-use place:** 
+[TouchGuiButtons.rbxlx](./TouchGuiButtons.rbxlx)
