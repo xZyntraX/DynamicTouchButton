@@ -92,10 +92,11 @@ local function AlignmentFrameworkCreate(name, layoutType, parent)
 	frame.Name = name
 	frame.BackgroundTransparency = 1
 
-	local layout = frame:FindFirstChild(name .. "Layout") or Instance.new("UIListLayout", frame)
+	local layout : UIListLayout = frame:FindFirstChild(name .. "Layout") or Instance.new("UIListLayout", frame)
 	layout.Name = name .. "Layout"
 	layout.FillDirection = layoutType
 	layout.Padding = UDim.new(0.05, 0)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	return frame
 end
 
