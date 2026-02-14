@@ -1,0 +1,7 @@
+[project]
+name = "DynamicTouchButton"
+filePaths = ["src"]
+
+[compiler]
+type = "luau"
+target = "roblox"
