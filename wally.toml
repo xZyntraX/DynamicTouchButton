@@ -1,8 +1,9 @@
 [package]
-name = "administrator/DynamicTouchButton"
+name = "administrator/dynamictouchbutton"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
 Janitor = "howmanysmall/janitor@1.18.3"
+Signal = "howmanysmall/better-signal@2.1.0"

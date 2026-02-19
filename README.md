@@ -1,22 +1,28 @@
-# DynamicTouchButton v1.0.1
+# DynamicTouchButton v1.0.2
 
 A lightweight Luau module for Roblox that allows creating custom mobile buttons inside the default `TouchGui`.
 
 ## Features
-- Custom button icons and transparency (`ImageTransparency`)
-- Alignment presets (`RightTop`, `LeftBack`) with automatic layout frames
-- `LayoutOrder` support (`setOrder`)
-- Enable/disable individual buttons (`setEnabled`) and all buttons globally (`DynamicButtonsEnabled`)
-- Change button background color dynamically (`setBackground`)
+- Custom button icons and transparency (`setImageTransparency`)
+- Alignment presets (`RightTop`, `LeftBack`)
+- Layout order support (`setOrder`)
+- Enable / disable individual buttons (`setEnabled`)
+- Enable / disable all buttons globally (`DynamicButtonsEnabled`)
+- Dynamic background color (`setBackgroundColor`)
 - Optional vibration support (HapticEffect)
-- Click, InputBegan, and InputEnded events
-- Automatic respawn detection (rebuild buttons on `CharacterAdded`)
+- `Clicked`, `InputBegan`, `InputEnded` events (Signal-powered)
+- Automatic respawn detection (`CharacterAdded`)
 - Full cleanup handled with Janitor
-- Global registry to get buttons by name (`get`)
-- Get UI instance directly (`getInstance`)
+- Global registry (`DynamicTouchButton.get`)
+- Direct UI instance access (`getInstance`)
+- Fluent API design
 
 ## Requirements
-- Janitor module inside `ReplicatedStorage/Packages`
+
+The following dependencies must be inside `ReplicatedStorage/Packages`:
+
+- Janitor
+- Signal
 
 ## Installation
 Recommended structure:
@@ -24,7 +30,8 @@ Recommended structure:
 ReplicatedStorage
  └── TouchGuiButtons
      ├── Packages
-     │  └── Janitor.luau
+     │  ├── Janitor.luau
+     │  └── Signal.luau
      ├── DynamicTouchButton.luau
      └── Types.luau
 ```
@@ -36,112 +43,101 @@ ReplicatedStorage
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DynamicTouchButton = require(ReplicatedStorage.TouchGuiButtons.DynamicTouchButton)
 
--- Create a simple button
-local btn = DynamicTouchButton.new({
-    name = "Sprint",
-
-    imageID = 1234567890, -- replace with your decal ID
-
-    size = 90, -- 1 to 100
-    
-    order = 1,
-    alignment = "RightTop",
-
-    BackgroundColor = Color3.fromRGB(126, 255, 100),
-
-    Clicked = function(button)
-        print("Sprint clicked!")
-    end,
-})
-
--- Enable / disable button
-btn:setEnabled(true)
+local SprintButton = DynamicTouchButton.new()
+    :setName("Sprint")
+    :setImage(9760497816)
+    :setSize(90)
+    :setAlign("RightTop")
+    :setOrder(1)
+    :setBackgroundColor(Color3.fromRGB(126, 255, 100))
+    :Clicked(function(selected)
+        print("Sprint clicked! Selected:", selected)
+    end)
 ```
 ### Full Example
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DynamicTouchButton = require(ReplicatedStorage.TouchGuiButtons.DynamicTouchButton)
 
--- CREATE BUTTON
-local SprintButton = DynamicTouchButton.new({
-    name = "Sprint",
-
-    imageID = 1234567890,  -- replace with your decal ID
-    size = 90,              -- 1 to 100
-
-    order = 1,
-    alignment = "RightTop",
-
-    ImageTransparency = 0.2,
-    BackgroundColor = Color3.fromRGB(255, 0, 0),
-
-    Vibration = {
-        HapticEffectType = Enum.HapticEffectType.UIClick,
-        Delay = 0.15,
-    },
-
-    Clicked = function(button)
-        print("[Sprint]: Clicked!", button.Name)
-    end,
-
-    InputBegan = function(input)
+local SprintButton = DynamicTouchButton.new()
+    :setName("Sprint")
+    :setImage(9760497816)
+    :setSize(90)
+    :setAlign("RightTop")
+    :setOrder(1)
+    :setImageTransparency(0.2)
+    :setBackgroundColor(Color3.fromRGB(255, 0, 0))
+    :Clicked(function(selected)
+        print("[Sprint]: Clicked!", selected)
+    end)
+    :InputBegan(function(input, selected)
         print("[Sprint]: Input Began", input.UserInputType)
-    end,
-
-    InputEnded = function(input)
+    end)
+    :InputEnded(function(input, selected)
         print("[Sprint]: Input Ended", input.UserInputType)
-    end,
-})
+    end)
 
--- CHANGE ORDER
+-- Enable / disable
+SprintButton:setEnabled(false)
+task.wait(2)
+SprintButton:setEnabled(true)
+
+-- Change order
 SprintButton:setOrder(2)
 
--- CHANGE ALIGNMENT
-SprintButton:Align("LeftBack")
+-- Change alignment
+SprintButton:setAlign("LeftBack")
 
--- CHANGE BACKGROUND COLOR
-SprintButton:setBackground(Color3.fromRGB(100, 255, 100))
+-- Change background
+SprintButton:setBackgroundColor(Color3.fromRGB(100, 255, 100))
 
--- ENABLE / DISABLE BUTTON
-task.delay(3, function()
-    print("Disabling button...")
-    SprintButton:setEnabled(false)
-end)
+-- Get UI instance
+local instance = SprintButton:getInstance()
+print("Instance:", instance)
 
-task.delay(6, function()
-    print("Enabling button...")
-    SprintButton:setEnabled(true)
-end)
-
--- GET BUTTON INSTANCE
-local buttonInstance = SprintButton:getInstance()
-print("Button UI instance:", buttonInstance)
-
--- GET BUTTON BY NAME (GLOBAL REGISTRY)
-local foundButton = DynamicTouchButton.get("Sprint")
-if foundButton then
-    print("Found button in global registry:", foundButton.name)
+-- Get by name
+local found = DynamicTouchButton.get("Sprint")
+if found then
+    print("Found in registry:", found.name)
 end
 
--- ENABLE / DISABLE ALL BUTTONS
+-- Enable / disable all buttons
 DynamicTouchButton.DynamicButtonsEnabled(false)
-task.delay(2, function()
-    DynamicTouchButton.DynamicButtonsEnabled(true)
-end)
+task.wait(2)
+DynamicTouchButton.DynamicButtonsEnabled(true)
 
--- DESTROY BUTTON
-task.delay(12, function()
-    print("Destroying Sprint button...")
+-- Destroy
+task.delay(10, function()
     SprintButton:Destroy()
 end)
 ```
+## Events (Signal-Based)
+
+All events are internally powered by `Signal`, allowing multiple listeners:
+
+```lua
+SprintButton:Clicked(function(selected)
+    print("Listener A")
+end)
+
+SprintButton:Clicked(function(selected)
+    print("Listener B")
+end)
+```
+
 ## Example image
 
 ![Example with multiple buttons](images/Example.png)
 
 ## Notes
-This module was made to be simple and beginner-friendly, but also useful for intermediate projects.  
-If you find any bugs, improvements, or have suggestions, feel free to open an issue or contribute. Any help is appreciated!
+DynamicTouchButton is designed to be:
+
+- Simple for beginners
+- Scalable for advanced projects
+- Clean internally
+- Performance-aware
+
+If you find bugs or want to contribute, feel free to open an issue or submit a pull request.
 
 ## Rojo
 To build the place from scratch, use:
@@ -155,3 +151,6 @@ Next, open `TouchGuiButtons.rbxlx` in Roblox Studio and start the Rojo server:
 ```bash
 rojo serve
 ```
+
+**Download the ready-to-use place:** 
+[TouchGuiButtons.rbxlx](./TouchGuiButtons.rbxlx)

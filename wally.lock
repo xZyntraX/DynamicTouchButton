@@ -3,13 +3,18 @@
 registry = "test"
 
 [[package]]
-name = "administrator/touchguibuttons"
+name = "administrator/dynamictouchbutton"
 version = "0.1.0"
-dependencies = [["Janitor", "howmanysmall/janitor@1.18.3"]]
+dependencies = [["Janitor", "howmanysmall/janitor@1.18.3"], ["Signal", "howmanysmall/better-signal@2.1.0"]]
 
 [[package]]
 name = "evaera/promise"
 version = "4.0.0"
+dependencies = []
+
+[[package]]
+name = "howmanysmall/better-signal"
+version = "2.1.0"
 dependencies = []
 
 [[package]]

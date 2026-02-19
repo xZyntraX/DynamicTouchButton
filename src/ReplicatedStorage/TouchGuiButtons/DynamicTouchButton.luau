@@ -1,15 +1,17 @@
+--!optimize 2
+
 --[[
- DynamicTouchButton - Roblox Mobile TouchGui Button Library
- Created by: Zyntra (lucasrtt132)
+	DynamicTouchButton - Roblox Mobile TouchGui Button Library
+	Created by: Zyntra (lucasrtt132)
 
- This module allows developers to easily create and manage custom mobile
- buttons inside Roblox's TouchGui system.
+	This module allows developers to easily create and manage custom mobile
+	buttons inside Roblox's TouchGui system.
 
- All documentation, usage examples, and updates are available on GitHub:
- https://github.com/xZyntraX/DynamicTouchButton
+	All documentation, usage examples, and updates are available on GitHub:
+	https://github.com/xZyntraX/DynamicTouchButton
 
- Open Source Project: Feel free to use or modify, just keep credits please.
- ]]
+	Open Source Project: Feel free to use or modify, just keep credits please.
+]]
 
 -- SERVICES
 local Players = game:GetService("Players")
@@ -17,19 +19,19 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
+local playerGui = LocalPlayer.PlayerGui
 
 local Packages = script.Parent.Packages
 
 -- MODULES
 local Types = require(script.Parent.Types)
 local Janitor = require(Packages.Janitor)
+local Signal = require(Packages.Signal)
 
 -- TYPES
 type AlignmentType = Types.AlignmentType
 type DynamicTouchButtonConfig = Types.DynamicTouchButtonConfig
 export type DynamicTouchButton = Types.DynamicTouchButton
-
-local Logs = true --BUTTONS LOGS
 
 local DynamicTouchButton = {}
 DynamicTouchButton.__index = DynamicTouchButton
@@ -39,6 +41,12 @@ local AlignmentsFrames = {}
 
 local function IsRunningStudio(): boolean
 	return RunService:IsStudio()
+end
+
+local function SafeLog(self: DynamicTouchButton, funcName: string, text: string)
+	if IsRunningStudio() then
+		print(`({self.name}) / [{funcName}]: {text}`)
+	end
 end
 
 -- BUTTON REQUEST
@@ -77,9 +85,7 @@ local function VibrationEffect(effectType: Enum.HapticEffectType, Delay: number)
 	effect.Parent = HapticCache
 
 	effect:Play()
-	if IsRunningStudio() and Logs then
-		print("[VibrationEffect]: vibrated")
-	end
+
 	task.delay(Delay, function()
 		if effect then
 			effect:Destroy()
@@ -92,7 +98,7 @@ local function AlignmentFrameworkCreate(name, layoutType, parent)
 	frame.Name = name
 	frame.BackgroundTransparency = 1
 
-	local layout : UIListLayout = frame:FindFirstChild(name .. "Layout") or Instance.new("UIListLayout", frame)
+	local layout: UIListLayout = frame:FindFirstChild(name .. "Layout") or Instance.new("UIListLayout", frame)
 	layout.Name = name .. "Layout"
 	layout.FillDirection = layoutType
 	layout.Padding = UDim.new(0.05, 0)
@@ -100,14 +106,33 @@ local function AlignmentFrameworkCreate(name, layoutType, parent)
 	return frame
 end
 
-local function updateAppearance(self)
-	local btn = _WaitForButton(self)
+local function updateAppearance(self: DynamicTouchButton)
+	local btn: ImageButton = _WaitForButton(self)
+	local image: ImageButton = btn.ReferenceIMG
+
+	local touchGui = playerGui:WaitForChild("TouchGui", 10)
+	local touchControlFrame = touchGui:WaitForChild("TouchControlFrame")
+	local jumpButton: ImageButton = touchControlFrame:WaitForChild("JumpButton")
+	local newSize =
+		UDim2.new(0, jumpButton.Size.X.Offset * self.size / 100, 0, jumpButton.Size.Y.Offset * self.size / 100)
+
+	local parentBtn = AlignmentsFrames[self.alignment]
+	if not parentBtn then
+		error("Invalid alignment: " .. tostring(self.alignment))
+	end
+
+	btn.Name = self.name
 	btn.Visible = self.State.Enabled
 	btn.ImageColor3 = self.BackgroundColor
+	btn.LayoutOrder = self.order
+	btn.Size = newSize
+
+	image.Image = "rbxassetid://" .. tostring(self.imageID)
+	image.ImageTransparency = self.ImageTransparency
 end
 
 -- ADD BUTTON
-local function btnAdd(self)
+local function btnAdd(self: DynamicTouchButton)
 	if not self.State then
 		return
 	end
@@ -120,8 +145,6 @@ local function btnAdd(self)
 		self.State.Button:Destroy()
 		self.State.Button = nil
 	end
-
-	local playerGui = LocalPlayer.PlayerGui
 
 	local touchGui = playerGui:WaitForChild("TouchGui", 10)
 	if not touchGui then
@@ -189,10 +212,8 @@ local function btnAdd(self)
 	ReferenceIMG.Position = UDim2.fromScale(0.5, 0.5)
 	ReferenceIMG.Size = UDim2.fromScale(0.7, 0.7)
 
-	local SizePrecentage = self.size / 100
-
 	local newSize =
-		UDim2.new(0, jumpButton.Size.X.Offset * SizePrecentage, 0, jumpButton.Size.Y.Offset * SizePrecentage)
+		UDim2.new(0, jumpButton.Size.X.Offset * self.size / 100, 0, jumpButton.Size.Y.Offset * self.size / 100)
 	Button.Size = newSize
 
 	self.btnJanitor = Janitor.new()
@@ -205,7 +226,8 @@ local function btnAdd(self)
 			if self.Vibration then
 				VibrationEffect(self.Vibration.HapticEffectType, self.Vibration.Delay)
 			end
-			self.Clicked(Button)
+			self.State.Selected = not self.State.Selected
+			self._clickedCallback:Fire(self.State.Selected)
 		end),
 		"Disconnect"
 	)
@@ -214,7 +236,7 @@ local function btnAdd(self)
 			if not self.State.Enabled then
 				return
 			end
-			self.InputBegan(input)
+			self._inputBeganCallback:Fire(input, self.State.Selected)
 		end),
 		"Disconnect"
 	)
@@ -223,7 +245,7 @@ local function btnAdd(self)
 			if not self.State.Enabled then
 				return
 			end
-			self.InputEnded(input)
+			self._inputEndedCallback:Fire(input, self.State.Selected)
 		end),
 		"Disconnect"
 	)
@@ -241,9 +263,9 @@ local function resetDetection(self: DynamicTouchButton)
 			if not self.State then
 				return
 			end
-			if IsRunningStudio() and Logs then
-				print("[resetDetection]: Player restarted")
-			end
+
+			SafeLog(self, "resetDetection", "Player restarted")
+
 			task.defer(function()
 				if not self.State then
 					return
@@ -255,44 +277,87 @@ local function resetDetection(self: DynamicTouchButton)
 	)
 end
 
+-- SET NAME
+function DynamicTouchButton:setName(Name: string): DynamicTouchButton
+	self.name = Name
+
+	SafeLog(self, "setName", "name changed")
+	updateAppearance(self)
+
+	return self
+end
+
+-- MODIFY OR ADD IMAGE
+function DynamicTouchButton:setImage(imageID: number): DynamicTouchButton
+	self.imageID = imageID
+
+	SafeLog(self, "setImage", "image changed")
+	updateAppearance(self)
+
+	return self
+end
+
+-- MODIFY IMAGE TRANSPARENCY
+function DynamicTouchButton:setImageTransparency(transparency: number): DynamicTouchButton
+	self.ImageTransparency = transparency
+
+	SafeLog(self, "setImageTransparency", "imageTransparency changed")
+	updateAppearance(self)
+
+	return self
+end
+
+-- SET BACKGROUND COLOR
+function DynamicTouchButton:setBackgroundColor(Color: Color3): DynamicTouchButton?
+	self.BackgroundColor = Color
+
+	SafeLog(self, "setBackgroundColor", "BackgroundColor changed")
+	updateAppearance(self)
+
+	return self
+end
+
 -- BUTTON DISPLAY ORDER
-function DynamicTouchButton:setOrder(order: number)
-	local button = _WaitForButton(self)
+function DynamicTouchButton:setOrder(order: number): DynamicTouchButton
 	if type(order) ~= "number" then
 		error("The order must be a number")
 	end
-	if IsRunningStudio() and Logs then
-		print("[setOrder]: button change")
-	end
 
 	self.order = order
-	button.LayoutOrder = order
+
+	SafeLog(self, "setOrder", "order changed")
+	updateAppearance(self)
+
+	return self
 end
 
 -- ALIGN BUTTON
-function DynamicTouchButton:Align(align: AlignmentType)
+function DynamicTouchButton:setAlign(align: AlignmentType): DynamicTouchButton
 	if not AlignmentsFrames or not AlignmentsFrames.LeftBack then
 		error("Alignment frames not created yet")
 	end
 
-	local button = _WaitForButton(self)
-
-	if align == "LeftBack" then
-		button.Parent = AlignmentsFrames.LeftBack
-	elseif align == "RightTop" then
-		button.Parent = AlignmentsFrames.RightTop
-	else
-		error("invalid alignment")
-	end
-	if IsRunningStudio() and Logs then
-		print("[Align]: adjusted alignment")
-	end
-
 	self.alignment = align
+
+	SafeLog(self, "setAlign", "alignment changed")
+	updateAppearance(self)
+
+	return self
+end
+
+-- CHANGE THE BUTTON SIZE
+function DynamicTouchButton:setSize(size: number): DynamicTouchButton
+	size = math.clamp(size, 1, 100)
+	self.size = size
+
+	SafeLog(self, "setSize", "size changed")
+	updateAppearance(self)
+
+	return self
 end
 
 -- ENABLE BUTTON
-function DynamicTouchButton:setEnabled(enabled: boolean): ()
+function DynamicTouchButton:setEnabled(enabled: boolean): DynamicTouchButton
 	if self.State.BTNEnabledJanitor then
 		self.State.BTNEnabledJanitor:Destroy()
 	end
@@ -300,7 +365,10 @@ function DynamicTouchButton:setEnabled(enabled: boolean): ()
 	self.State.Enabled = enabled
 	self.State.BTNEnabledJanitor = Janitor.new()
 
+	SafeLog(self, "setEnabled", "adjusted")
 	updateAppearance(self)
+
+	return self
 end
 
 -- GET BUTTON INSTANCE
@@ -309,16 +377,36 @@ function DynamicTouchButton:getInstance(): ImageButton
 	return button
 end
 
--- SET BACKGROUND
-function DynamicTouchButton:setBackground(Color: Color3): ()
-	if not self.State then
-		return
+-- CLICK FUNCTION
+function DynamicTouchButton:Clicked(func: (boolean) -> ()): DynamicTouchButton
+	if type(func) ~= "function" then
+		error("Clicked expects a function")
 	end
-	if not Color then
-		Color = Color3.fromRGB(255, 255, 255)
+
+	self._clickedCallback:Connect(func)
+	return self
+end
+
+-- INPUT BEGAN FUNCTION
+function DynamicTouchButton:InputBegan(func: (InputObject, boolean) -> ()): DynamicTouchButton
+	if type(func) ~= "function" then
+		error("InputBegan expects a function")
 	end
-	self.BackgroundColor = Color
-	updateAppearance(self)
+
+	self._inputBeganCallback:Connect(func)
+
+	return self
+end
+
+-- INPUT ENDED FUNCTION
+function DynamicTouchButton:InputEnded(func: (InputObject, boolean) -> ()): DynamicTouchButton
+	if type(func) ~= "function" then
+		error("InputEnded expects a function")
+	end
+
+	self._inputEndedCallback:Connect(func)
+
+	return self
 end
 
 -- DESTROY / CLEAN
@@ -352,6 +440,8 @@ function DynamicTouchButton:Destroy(): ()
 	self.State = nil
 end
 
+-----------------------------------------------------------------------------------------------------------------------------------
+
 function DynamicTouchButton.DynamicButtonsEnabled(enabled: boolean): ()
 	for _, btn in pairs(GlobalButtons) do
 		btn.State.Enabled = enabled
@@ -376,43 +466,31 @@ function DynamicTouchButton.get(Name: string): DynamicTouchButton?
 end
 
 -- CREATE BUTTON
-function DynamicTouchButton.new(config: DynamicTouchButtonConfig)
-	if type(config) ~= "table" then
-		error("The configuration needs to be a table.")
-	end
-	if not config.name then
-		error("You need to give the button a name.")
-	end
-	if not config.imageID then
-		error("You need to enter a valid ID for the button image.")
-	end
-	if not config.size then
-		error("you need to define a size")
-	end
-
+function DynamicTouchButton.new()
 	local self = setmetatable({}, DynamicTouchButton)
 
-	self.name = config.name
-	self.imageID = config.imageID
-	self.size = math.clamp(config.size, 1, 100)
+	self.name = ""
+	self.imageID = 0
+	self.size = 100
 
-	self.InputBegan = config.InputBegan or function() end
-	self.InputEnded = config.InputEnded or function() end
-	self.Clicked = config.Clicked or function() end
+	self._clickedCallback = Signal.new()
+	self._inputBeganCallback = Signal.new()
+	self._inputEndedCallback = Signal.new()
 
-	self.ImageTransparency = config.ImageTransparency or 0.5
-	self.BackgroundColor = config.BackgroundColor or Color3.fromRGB(255, 255, 255)
+	self.ImageTransparency = 0.5
+	self.BackgroundColor = Color3.fromRGB(255, 255, 255)
 
-	self.order = config.order or 1
-	self.alignment = config.alignment or "RightTop"
+	self.order = 1
+	self.alignment = "RightTop"
 
-	self.Vibration = config.Vibration
+	self.Vibration = nil
 
 	self.State = {
 		["resetDetect"] = nil,
 		["Button"] = nil,
 		["BTNEnabledJanitor"] = nil,
 		["Enabled"] = true,
+		["Selected"] = false,
 	}
 
 	btnAdd(self)
