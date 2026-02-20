@@ -73,7 +73,7 @@ local function _WaitForButton(self: DynamicTouchButton): ImageButton
 end
 
 -- VIBRATION EFFECT
-local function VibrationEffect(effectType: Enum.HapticEffectType, Delay: number)
+local function VibrationEffect(effectType: Enum.HapticEffectType, Delay: number?)
 	Delay = Delay or 0.15
 
 	local HapticCache = ReplicatedStorage:FindFirstChild("HapticCache") or Instance.new("Folder", ReplicatedStorage)
@@ -108,7 +108,8 @@ end
 
 local function updateAppearance(self: DynamicTouchButton)
 	local btn: ImageButton = _WaitForButton(self)
-	local image: ImageButton = btn.ReferenceIMG
+	local image: ImageButton? = btn:FindFirstChild("ReferenceIMG")
+	if not image then return end
 
 	local touchGui = playerGui:WaitForChild("TouchGui", 10)
 	local touchControlFrame = touchGui:WaitForChild("TouchControlFrame")
@@ -198,8 +199,8 @@ local function btnAdd(self: DynamicTouchButton)
 	Button.BackgroundTransparency = 1
 	Button.ImageTransparency = 0
 	Button.Name = self.name
-	Button.Image = "rbxassetid://6256840888"
-	Button.PressedImage = "rbxassetid://14112658774"
+	Button.Image = Types.background.deselected
+	Button.PressedImage = Types.background.selected
 	Button.ImageColor3 = self.BackgroundColor
 
 	local ReferenceIMG: ImageLabel = Instance.new("ImageLabel", Button)
@@ -226,7 +227,16 @@ local function btnAdd(self: DynamicTouchButton)
 			if self.Vibration then
 				VibrationEffect(self.Vibration.HapticEffectType, self.Vibration.Delay)
 			end
-			self.State.Selected = not self.State.Selected
+			if self.State.Selected ~= nil then
+				self.State.Selected = not self.State.Selected
+				if self.State.Selected then
+					self.State.Button.Image = Types.background.selected
+					self.State.Button.PressedImage = Types.background.deselected
+				else
+					self.State.Button.Image = Types.background.deselected
+					self.State.Button.PressedImage = Types.background.selected
+				end
+			end
 			self._clickedCallback:Fire(self.State.Selected)
 		end),
 		"Disconnect"
@@ -277,6 +287,8 @@ local function resetDetection(self: DynamicTouchButton)
 	)
 end
 
+-----------------------------------------------------------------------------------------------------------------------------------
+
 -- SET NAME
 function DynamicTouchButton:setName(Name: string): DynamicTouchButton
 	self.name = Name
@@ -308,7 +320,7 @@ function DynamicTouchButton:setImageTransparency(transparency: number): DynamicT
 end
 
 -- SET BACKGROUND COLOR
-function DynamicTouchButton:setBackgroundColor(Color: Color3): DynamicTouchButton?
+function DynamicTouchButton:setBackgroundColor(Color: Color3): DynamicTouchButton
 	self.BackgroundColor = Color
 
 	SafeLog(self, "setBackgroundColor", "BackgroundColor changed")
@@ -333,8 +345,8 @@ end
 
 -- ALIGN BUTTON
 function DynamicTouchButton:setAlign(align: AlignmentType): DynamicTouchButton
-	if not AlignmentsFrames or not AlignmentsFrames.LeftBack then
-		error("Alignment frames not created yet")
+	if not AlignmentsFrames[align] then
+		error(`Invalid or not initialized alignment: {align}`)
 	end
 
 	self.alignment = align
@@ -409,12 +421,28 @@ function DynamicTouchButton:InputEnded(func: (InputObject, boolean) -> ()): Dyna
 	return self
 end
 
+-- DISABLE SWITCH MODE
+function DynamicTouchButton:oneClick(): DynamicTouchButton
+	self.State.Selected = nil
+	return self
+end
+
+-- DEFINE THE VIBRATION
+function DynamicTouchButton:setVibration(HapticEffectType: Enum.HapticEffectType, Delay: number?): DynamicTouchButton
+	self.Vibration = {
+		HapticEffectType = HapticEffectType,
+		Delay = Delay
+	}
+
+	return self
+end
+
 -- DESTROY / CLEAN
 function DynamicTouchButton:Destroy(): ()
 	if not self.State then
 		return
 	end
-	for i, btn in GlobalButtons do
+	for i, btn in ipairs(GlobalButtons) do
 		if btn == self then
 			table.remove(GlobalButtons, i)
 			break
@@ -442,9 +470,11 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------------------
 
+-- DISABLE THE DYNAMIC BUTTON
 function DynamicTouchButton.DynamicButtonsEnabled(enabled: boolean): ()
 	for _, btn in pairs(GlobalButtons) do
 		btn.State.Enabled = enabled
+		updateAppearance(btn)
 		continue
 	end
 	if AlignmentsFrames.LeftBack then
@@ -466,16 +496,18 @@ function DynamicTouchButton.get(Name: string): DynamicTouchButton?
 end
 
 -- CREATE BUTTON
-function DynamicTouchButton.new()
+function DynamicTouchButton.new(): DynamicTouchButton
 	local self = setmetatable({}, DynamicTouchButton)
 
 	self.name = ""
 	self.imageID = 0
 	self.size = 100
-
+	
 	self._clickedCallback = Signal.new()
 	self._inputBeganCallback = Signal.new()
 	self._inputEndedCallback = Signal.new()
+
+	self.btnJanitor = nil
 
 	self.ImageTransparency = 0.5
 	self.BackgroundColor = Color3.fromRGB(255, 255, 255)

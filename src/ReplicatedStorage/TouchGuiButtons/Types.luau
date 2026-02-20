@@ -27,16 +27,16 @@ export type DynamicTouchButton = {
 	BackgroundColor: Color3,
 	Vibration: VibrationConfig?,
 
-	_clickedCallback: ((boolean) -> ())?,
-	_inputBeganCallback: ((InputObject, boolean) -> ())?,
-	_inputEndedCallback: ((InputObject, boolean) -> ())?,
+	_clickedCallback: Signal,
+	_inputBeganCallback: Signal,
+	_inputEndedCallback: Signal,
 
 	State: {
 		resetDetect: Janitor?,
 		Button: ImageButton?,
 		BTNEnabledJanitor: Janitor?,
 		Enabled: boolean,
-		Selected: boolean,
+		Selected: boolean?,
 	},
 
 	btnJanitor: Janitor?,
@@ -49,13 +49,15 @@ export type DynamicTouchButton = {
 	setAlign: (self: DynamicTouchButton, align: AlignmentType) -> DynamicTouchButton,
 	setSize: (self: DynamicTouchButton, size: number) -> DynamicTouchButton,
 	setEnabled: (self: DynamicTouchButton, enabled: boolean) -> DynamicTouchButton,
+	setVibration: (self: DynamicTouchButton, HapticEffectType: Enum.HapticEffectType, Delay: number?) -> DynamicTouchButton,
 
 	getInstance: (self: DynamicTouchButton) -> ImageButton,
 
-	Clicked: (self: DynamicTouchButton, func: (boolean) -> ()) -> DynamicTouchButton,
-	InputBegan: (self: DynamicTouchButton, func: (InputObject, boolean) -> ()) -> DynamicTouchButton,
-	InputEnded: (self: DynamicTouchButton, func: (InputObject, boolean) -> ()) -> DynamicTouchButton,
+	Clicked: (self: DynamicTouchButton, func: (boolean?) -> ()) -> DynamicTouchButton,
+	InputBegan: (self: DynamicTouchButton, func: (InputObject, boolean?) -> ()) -> DynamicTouchButton,
+	InputEnded: (self: DynamicTouchButton, func: (InputObject, boolean?) -> ()) -> DynamicTouchButton,
 
+	oneClick: (self: DynamicTouchButton) -> DynamicTouchButton,
 	Destroy: (self: DynamicTouchButton) -> (),
 }
 
@@ -65,4 +67,9 @@ if not RunService:IsStudio() then
 	print("📱 Running DynamicTouchButton v1.0.2 by @lucasrtt132.")
 end
 
-return {}
+return {
+	["background"] = {
+		["selected"] = "rbxassetid://14112658774",
+		["deselected"] = "rbxassetid://6256840888"
+	}
+}

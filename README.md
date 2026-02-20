@@ -3,19 +3,26 @@
 A lightweight Luau module for Roblox that allows creating custom mobile buttons inside the default `TouchGui`.
 
 ## Features
-- Custom button icons and transparency (`setImageTransparency`)
-- Alignment presets (`RightTop`, `LeftBack`)
-- Layout order support (`setOrder`)
-- Enable / disable individual buttons (`setEnabled`)
-- Enable / disable all buttons globally (`DynamicButtonsEnabled`)
-- Dynamic background color (`setBackgroundColor`)
-- Optional vibration support (HapticEffect)
-- `Clicked`, `InputBegan`, `InputEnded` events (Signal-powered)
-- Automatic respawn detection (`CharacterAdded`)
-- Full cleanup handled with Janitor
-- Global registry (`DynamicTouchButton.get`)
-- Direct UI instance access (`getInstance`)
-- Fluent API design
+- `setName` – Change button name dynamically
+- `setImage` – Define or change the icon asset
+- `setImageTransparency` – Control icon transparency
+- `setBackgroundColor` – Customize button background color
+- `setOrder` – Control layout order
+- `setAlign` – Alignment presets (`RightTop`, `LeftBack`)
+- `setSize` – Adjust button size (1–100 scale)
+- `setEnabled` – Enable or disable individual buttons
+- `oneClick` – Disable toggle mode (single press behavior)
+- `setVibration` – Optional mobile vibration feedback
+- `Clicked` – Toggle click event
+- `InputBegan` – Input start detection
+- `InputEnded` – Input end detection
+- `getInstance` – Direct access to the ImageButton instance
+- `DynamicTouchButton.get` – Retrieve button by name
+- `DynamicTouchButton.DynamicButtonsEnabled` – Globally enable/disable all buttons
+- `Destroy` – Full cleanup and removal
+- Automatic respawn handling
+- Automatic memory cleanup using Janitor
+- More soon...
 
 ## Requirements
 
@@ -44,71 +51,72 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DynamicTouchButton = require(ReplicatedStorage.TouchGuiButtons.DynamicTouchButton)
 
 local SprintButton = DynamicTouchButton.new()
-    :setName("Sprint")
-    :setImage(9760497816)
-    :setSize(90)
-    :setAlign("RightTop")
-    :setOrder(1)
-    :setBackgroundColor(Color3.fromRGB(126, 255, 100))
-    :Clicked(function(selected)
-        print("Sprint clicked! Selected:", selected)
-    end)
+	:setName("Sprint")
+	:setImage(9760497816)
+	:setSize(90)
+	:setAlign("RightTop")
+	:setBackgroundColor(Color3.fromRGB(126, 255, 100))
+	:Clicked(function(selected)
+		print("Sprint toggled:", selected)
+	end)
 ```
 ### Full Example
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DynamicTouchButton = require(ReplicatedStorage.TouchGuiButtons.DynamicTouchButton)
 
-local SprintButton = DynamicTouchButton.new()
-    :setName("Sprint")
-    :setImage(9760497816)
-    :setSize(90)
-    :setAlign("RightTop")
-    :setOrder(1)
-    :setImageTransparency(0.2)
-    :setBackgroundColor(Color3.fromRGB(255, 0, 0))
-    :Clicked(function(selected)
-        print("[Sprint]: Clicked!", selected)
-    end)
-    :InputBegan(function(input, selected)
-        print("[Sprint]: Input Began", input.UserInputType)
-    end)
-    :InputEnded(function(input, selected)
-        print("[Sprint]: Input Ended", input.UserInputType)
-    end)
+-- Create
+local ActionButton = DynamicTouchButton.new()
 
--- Enable / disable
-SprintButton:setEnabled(false)
-task.wait(2)
-SprintButton:setEnabled(true)
+-- Configure core properties
+ActionButton
+	:setName("Action")
+	:setImage(10173441836)
+	:setImageTransparency(0.2)
+	:setBackgroundColor(Color3.fromRGB(0, 170, 255))
+	:setSize(85)
+	:setAlign("RightTop")
+	:setOrder(1)
+	:setVibration(Enum.HapticEffectType.UINotification, 0.1)
 
--- Change order
-SprintButton:setOrder(2)
+-- Events
+ActionButton
+	:Clicked(function(selected)
+		print("Clicked. Toggle state:", selected)
+	end)
+	:InputBegan(function(input, selected)
+		print("Input began:", input.UserInputType)
+	end)
+	:InputEnded(function(input, selected)
+		print("Input ended:", input.UserInputType)
+	end)
 
--- Change alignment
-SprintButton:setAlign("LeftBack")
+-- Switch to one-click mode (no toggle)
+ActionButton:oneClick()
 
--- Change background
-SprintButton:setBackgroundColor(Color3.fromRGB(100, 255, 100))
+-- Enable / Disable individual button
+ActionButton:setEnabled(false)
+task.wait(1)
+ActionButton:setEnabled(true)
 
--- Get UI instance
-local instance = SprintButton:getInstance()
-print("Instance:", instance)
+-- Access UI instance directly
+local instance = ActionButton:getInstance()
+print("Instance reference:", instance)
 
--- Get by name
-local found = DynamicTouchButton.get("Sprint")
+-- Retrieve button from global registry
+local found = DynamicTouchButton.get("Action")
 if found then
-    print("Found in registry:", found.name)
+	print("Found button in registry:", found.name)
 end
 
--- Enable / disable all buttons
+-- Globally enable / disable all dynamic buttons
 DynamicTouchButton.DynamicButtonsEnabled(false)
-task.wait(2)
+task.wait(1)
 DynamicTouchButton.DynamicButtonsEnabled(true)
 
--- Destroy
+-- Destroy and cleanup
 task.delay(10, function()
-    SprintButton:Destroy()
+	ActionButton:Destroy()
 end)
 ```
 ## Events (Signal-Based)
@@ -116,11 +124,11 @@ end)
 All events are internally powered by `Signal`, allowing multiple listeners:
 
 ```lua
-SprintButton:Clicked(function(selected)
+ActionButton:Clicked(function(selected)
     print("Listener A")
 end)
 
-SprintButton:Clicked(function(selected)
+ActionButton:Clicked(function(selected)
     print("Listener B")
 end)
 ```
