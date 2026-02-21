@@ -127,7 +127,8 @@ local function updateAppearance(self: DynamicTouchButton)
 	btn.ImageColor3 = self.BackgroundColor
 	btn.LayoutOrder = self.order
 	btn.Size = newSize
-
+	btn.Parent = parentBtn
+	
 	image.Image = "rbxassetid://" .. tostring(self.imageID)
 	image.ImageTransparency = self.ImageTransparency
 end

@@ -11,7 +11,7 @@ ActionButton
 	:setImageTransparency(0.2)
 	:setBackgroundColor(Color3.fromRGB(0, 170, 255))
 	:setSize(85)
-	:setAlign("RightTop")
+	:setAlign("LeftBack")
 	:setOrder(1)
 	:setVibration(Enum.HapticEffectType.UINotification, 0.1)
 
